@@ -246,7 +246,8 @@ class DHMVlaanderenDownloader:
     def execute(self):
         layer = self.dlg.study_area_selector.currentLayer()
         kbl = processing.run('native:extractbylocation', { 'INPUT' : QgsVectorLayer(os.path.join(os.path.dirname(__file__), 'Kbl/Kbl.shp')), 'INTERSECT' : layer, 'METHOD' : 0, 'PREDICATE' : [0,1,6], 'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT })['OUTPUT']
-        print(type(kbl))
+        kbls = [feature.attribute('CODE') for feature in kbl.getFeatures()]
+        print(kbls)
 
         url = ''
         #result = processing.run('native:filedownloader', {'URL': url, 'OUTPUT', QgsProcessing.TEMPORARY_OUTPUT})
