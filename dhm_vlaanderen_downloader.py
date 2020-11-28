@@ -24,7 +24,8 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
-from qgis.core import QgsProject, QgsMapLayerProxyModel
+from qgis.core import QgsProject, QgsMapLayerProxyModel, QgsProcessing, QgsVectorLayer
+from qgis import processing
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -213,9 +214,7 @@ class DHMVlaanderenDownloader:
         result = self.dlg.exec_()
         # See if OK was pressed
         if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
-            pass
+            self.execute()
 
 
     def updateComboBoxes(self):
@@ -241,4 +240,14 @@ class DHMVlaanderenDownloader:
             index = self.dlg.resolution_selector.findText(resolution)
             if index != -1:
                 self.dlg.resolution_selector.setCurrentIndex(index)
-            
+            self.resolution = self.dlg.resolution_selector.currentText()
+          
+
+    def execute(self):
+        layer = self.dlg.study_area_selector.currentLayer()
+        kbl = processing.run('native:extractbylocation', { 'INPUT' : QgsVectorLayer(os.path.join(os.path.dirname(__file__), 'Kbl/Kbl.shp')), 'INTERSECT' : layer, 'METHOD' : 0, 'PREDICATE' : [0,1,6], 'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT })['OUTPUT']
+        print(type(kbl))
+
+        url = ''
+        #result = processing.run('native:filedownloader', {'URL': url, 'OUTPUT', QgsProcessing.TEMPORARY_OUTPUT})
+
