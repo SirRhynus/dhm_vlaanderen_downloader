@@ -24,6 +24,7 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
+from qgis.core import QgsProject, QgsMapLayerProxyModel
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -62,6 +63,11 @@ class DHMVlaanderenDownloader:
         # Declare instance attributes
         self.actions = []
         self.menu = self.tr(u'&DHM Vlaanderen Downloader')
+
+        # Keep track of current settings
+        self.dhmv = ""
+        self.dhm = ""
+        self.resolution = ""
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
@@ -188,6 +194,18 @@ class DHMVlaanderenDownloader:
         if self.first_start == True:
             self.first_start = False
             self.dlg = DHMVlaanderenDownloaderDialog()
+        
+        # Set filter for study area
+        self.dlg.study_area_selector.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+
+        # Fill combo boxes
+        self.dlg.dhmv_selector.addItems(["I", "II"])
+
+        self.dlg.dhmv_selector.currentTextChanged.connect(self.updateComboBoxes)
+        self.dlg.dhm_selector.currentTextChanged.connect(self.updateComboBoxes)
+
+        # change current index now to trigger a currentTextChanged signal
+        self.dlg.dhmv_selector.setCurrentIndex(self.dlg.dhmv_selector.findText(self.dhmv) if self.dhmv else 1)
 
         # show the dialog
         self.dlg.show()
@@ -198,3 +216,29 @@ class DHMVlaanderenDownloader:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
             pass
+
+
+    def updateComboBoxes(self):
+        """Updates the combo boxes when one is changed"""
+        dhmv = self.dlg.dhmv_selector.currentText()
+        dhm = self.dlg.dhm_selector.currentText()
+        resolution = self.dlg.resolution_selector.currentText()
+    
+        if dhmv != self.dhmv:
+            self.dhmv = self.dlg.dhmv_selector.currentText()
+            self.dlg.dhm_selector.clear()
+            self.dlg.dhm_selector.addItems(["DTM", "DSM"] if dhmv == "II" else ["DHM"])
+            index = self.dlg.dhm_selector.findText(dhm)
+            if index != -1:
+                self.dlg.dhm_selector.setCurrentIndex(index)
+            # Cascade the effect
+            dhm = self.dlg.dhm_selector.currentText()
+
+        if dhm != self.dhm:  
+            self.dhm = self.dlg.dhm_selector.currentText()  
+            self.dlg.resolution_selector.clear()
+            self.dlg.resolution_selector.addItems(["5m", "25m", "100m"] if dhm == "DHM" else ["1m", "5m"] if dhm == "DSM" else ["1m", "5m", "25m", "100m"])
+            index = self.dlg.resolution_selector.findText(resolution)
+            if index != -1:
+                self.dlg.resolution_selector.setCurrentIndex(index)
+            
