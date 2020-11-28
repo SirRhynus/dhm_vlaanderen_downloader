@@ -247,8 +247,17 @@ class DHMVlaanderenDownloader:
         layer = self.dlg.study_area_selector.currentLayer()
         kbl = processing.run('native:extractbylocation', { 'INPUT' : QgsVectorLayer(os.path.join(os.path.dirname(__file__), 'Kbl/Kbl.shp')), 'INTERSECT' : layer, 'METHOD' : 0, 'PREDICATE' : [0,1,6], 'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT })['OUTPUT']
         kbls = [feature.attribute('CODE') for feature in kbl.getFeatures()]
-        print(kbls)
+    
+        dhms = []
+        for kbl in klbs:
+            url = ''
+            dhms.append(processing.run('native:filedownloader', {'URL': url, 'OUTPUT', QgsProcessing.TEMPORARY_OUTPUT})['OUTPUT'])
+        
+        vrt = processing.run('gdal:buildvirtualraster', {'ADD_ALPHA': False, 'ASSIGN_CRS': None, 'EXTRA': '', 'INPUT': dhms,
+            'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT, 'PROJ_DIFFERENCE': False, 'RESAMPLING': 0, 'RESOLUTION': 0, 'SEPERATE': False, 'SRC_NODATA': ''})['OUTPUT']
 
-        url = ''
-        #result = processing.run('native:filedownloader', {'URL': url, 'OUTPUT', QgsProcessing.TEMPORARY_OUTPUT})
-
+        dhm_study_area = processing.run('gdal:cliprasterbymasklayer', { 'ALPHA_BAND': False, 'CROP_TO_CUTLINE': True, 'DATA_TYPE': 0, 'EXTRA': 0, 'INPUT': vrt, 'KEEP_RESOLUTION': True,
+            'MASK': layer, 'MULTITHREADING': False, 'NODATA': None, 'OPTIONS': '', 'OUTPU': QgsProcessing.TEMPORARY_OUTPUT, 'SET_RESOLUTION': False, 'SOURCE_CRS': None,
+            'TARGET_CRS': None, 'X_RESOLUTION': None, 'Y_RESOLUTION': None})['OUTPUT']
+        
+        
