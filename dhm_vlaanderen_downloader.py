@@ -250,14 +250,15 @@ class DHMVlaanderenDownloader:
 
         # Determine kaartbladen
         kbl = processing.run('native:extractbylocation', { 'INPUT' : QgsVectorLayer(os.path.join(os.path.dirname(__file__), 'Kbl/Kbl.shp')), 'INTERSECT' : layer, 'METHOD' : 0, 'PREDICATE' : [0,1,6], 'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT })['OUTPUT']
-        kbls = [int(feature.attribute('CODE')) for feature in kbl.getFeatures()]
+        kbls = {int(feature.attribute('CODE')) for feature in kbl.getFeatures()}
     
         dhms = []
+        log(f'Downloading kaartbladen {kbls}.')
         for index, kbl in enumerate(kbls):
             log(f'Downloading DHM {index+1}/{len(kbls)}...')
             # Download zipfiles
             if self.dhmv == 'I':
-                url = f'https://downloadagiv.blob.core.windows.net/digitaal-hoogtemodel-vlaanderen-raster-{self.resolutionself.lower()}/geoTIFF/{f"Gegroepeerd%20per%20kaartblad/R{self.resolution[:-1]}_{kbl:02d}.zip" if self.resolution != "100m" else "R100.zip"}'
+                url = f'https://downloadagiv.blob.core.windows.net/digitaal-hoogtemodel-vlaanderen-raster-{self.resolution}/geoTIFF/{f"Gegroepeerd%20per%20kaartblad/R{self.resolution[:-1]}_{kbl:02d}.zip" if self.resolution != "100m" else "R100.zip"}'
             else:
                 url = f'https://downloadagiv.blob.core.windows.net/dhm-vlaanderen-ii-{self.dhm.lower()}-raster-{self.resolution}/DHMVII{self.dhm}RAS{self.resolution}{f"_k{kbl:02d}.zip" if self.resolution in ("1m", "5m") else ".zip"}'
             zip_file_name = processing.run('native:filedownloader', {'URL': url, 'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT})['OUTPUT']
@@ -278,8 +279,7 @@ class DHMVlaanderenDownloader:
 
         # Build virual raster from dhms
         log('Building virtual raster...')
-        vrt = QgsRasterLayer(processing.run('gdal:buildvirtualraster', {'ADD_ALPHA': False, 'ASSIGN_CRS': None, 'EXTRA': '', 'INPUT': dhms,
-            'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT, 'PROJ_DIFFERENCE': False, 'RESAMPLING': 0, 'RESOLUTION': 0, 'SEPERATE': False, 'SRC_NODATA': ''})['OUTPUT'])
+        vrt = QgsRasterLayer(processing.run('gdal:buildvirtualraster', {'INPUT': dhms, 'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT, 'SEPARATE': False, 'SRC_NODATA': '-9999'})['OUTPUT'])
 
         if not vrt.isValid():
             QgsMessageLog.logMessage(f'Raster {vrt} is not valid!', tag="Processing", level=Qgis.Critical)
@@ -287,7 +287,8 @@ class DHMVlaanderenDownloader:
 
         # Clip dhm to study area
         log('Clipping area...')
-        dhm_study_area = QgsRasterLayer(processing.run('gdal:cliprasterbymasklayer', {'CROP_TO_CUTLINE': True, 'INPUT': vrt, 'KEEP_RESOLUTION': True, 'MASK': layer, 'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT})['OUTPUT'])
+        dhm_study_area = QgsRasterLayer(processing.run('gdal:cliprasterbymasklayer', {'CROP_TO_CUTLINE': True, 'INPUT': vrt, 'KEEP_RESOLUTION': True, 'MASK': layer, 'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT})['OUTPUT'], 
+            f'dhmv{self.dhmv}{self.dhm}{self.resolution}_{layer.name()}')
         
         if not dhm_study_area.isValid():
             QgsMessageLog.logMessage(f'Raster {dhm_study_area} is not valid!', tag="Processing", level=Qgis.Critical)
