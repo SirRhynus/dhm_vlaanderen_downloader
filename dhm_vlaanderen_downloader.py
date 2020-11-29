@@ -206,6 +206,7 @@ class DHMVlaanderenDownloader:
 
         self.dlg.dhmv_selector.currentTextChanged.connect(self.updateComboBoxes)
         self.dlg.dhm_selector.currentTextChanged.connect(self.updateComboBoxes)
+        self.dlg.resolution_selector.currentTextChanged.connect(self.updateComboBoxes)
 
         # change current index now to trigger a currentTextChanged signal
         self.dlg.dhmv_selector.setCurrentIndex(self.dlg.dhmv_selector.findText(self.dhmv) if self.dhmv else 1)
@@ -242,21 +243,27 @@ class DHMVlaanderenDownloader:
             index = self.dlg.resolution_selector.findText(resolution)
             if index != -1:
                 self.dlg.resolution_selector.setCurrentIndex(index)
-            self.resolution = self.dlg.resolution_selector.currentText()
+        
+        self.resolution = self.dlg.resolution_selector.currentText()
           
 
     def execute(self):
         output_file = self.dlg.output_file.filePath()
         layer = self.dlg.study_area_selector.currentLayer()
+        log(f'{self.dhmv} {self.resolution}')
 
         # Determine kaartbladen
-        kbl = processing.run('native:extractbylocation', { 'INPUT' : QgsVectorLayer(os.path.join(os.path.dirname(__file__), 'Kbl/Kbl.shp')), 'INTERSECT' : layer, 'METHOD' : 0, 'PREDICATE' : [0,1,6], 'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT })['OUTPUT']
-        kbls = {int(feature.attribute('CODE')) for feature in kbl.getFeatures()}
+        if (self.dhmv == 'I' and self.resolution == '100m') or (self.dhmv == 'II' and self.resolution in ('25m', '100m')):
+            # Don't download the same Vlaanderen kaartblad for high resolutions
+            log('Kaartblad Vlaanderen')
+            kbls = {'1'}
+        else:
+            kbl = processing.run('native:extractbylocation', { 'INPUT' : QgsVectorLayer(os.path.join(os.path.dirname(__file__), 'Kbl/Kbl.shp')), 'INTERSECT' : layer, 'METHOD' : 0, 'PREDICATE' : [0,1,6], 'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT })['OUTPUT']
+            kbls = {int(feature.attribute('CODE')) for feature in kbl.getFeatures()}
     
         dhms = []
-        log(f'Downloading kaartbladen {kbls}.')
         for index, kbl in enumerate(kbls):
-            log(f'Downloading DHM {index+1}/{len(kbls)}...')
+            log(f'Downloading DHMV{self.dhmv}{self.dhm}{self.resolution} {index+1}/{len(kbls)}...')
             # Download zipfiles
             if self.dhmv == 'I':
                 url = f'https://downloadagiv.blob.core.windows.net/digitaal-hoogtemodel-vlaanderen-raster-{self.resolution}/geoTIFF/{f"Gegroepeerd%20per%20kaartblad/R{self.resolution[:-1]}_{kbl:02d}.zip" if self.resolution != "100m" else "R100.zip"}'
