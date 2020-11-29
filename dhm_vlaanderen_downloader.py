@@ -288,7 +288,7 @@ class DHMVlaanderenDownloader:
         # Clip dhm to study area
         log('Clipping area...')
         dhm_study_area = QgsRasterLayer(processing.run('gdal:cliprasterbymasklayer', {'CROP_TO_CUTLINE': True, 'INPUT': vrt, 'KEEP_RESOLUTION': True, 'MASK': layer, 'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT})['OUTPUT'], 
-            f'dhmv{self.dhmv}{self.dhm}{self.resolution}_{layer.name()}')
+            f'DHMV{self.dhmv}{self.dhm}{self.resolution}_{layer.name()}')
         
         if not dhm_study_area.isValid():
             QgsMessageLog.logMessage(f'Raster {dhm_study_area} is not valid!', tag="Processing", level=Qgis.Critical)
