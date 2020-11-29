@@ -6,7 +6,7 @@
 name=DHM Vlaanderen Downloader
 qgisMinimumVersion=3.0
 description=Downloads and DHM Vlaanderen for specific area
-version=0.1
+version=0.2
 author=Rien Boydens
 email=rien.boydens@gmail.com
 
@@ -20,6 +20,7 @@ repository=http://github.com/SirRhynus
 
 hasProcessingProvider=no
 changelog=
+    0.2 - First working version
     0.1 - Made GUI
 
 # Tags are comma separated with spaces allowed
