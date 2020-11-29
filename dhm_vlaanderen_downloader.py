@@ -201,6 +201,7 @@ class DHMVlaanderenDownloader:
         self.dlg.study_area_selector.setFilters(QgsMapLayerProxyModel.PolygonLayer)
 
         # Fill combo boxes
+        self.dlg.dhmv_selector.clear()
         self.dlg.dhmv_selector.addItems(["I", "II"])
 
         self.dlg.dhmv_selector.currentTextChanged.connect(self.updateComboBoxes)
