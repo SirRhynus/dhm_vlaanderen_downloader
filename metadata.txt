@@ -6,19 +6,19 @@
 name=DHM Vlaanderen Downloader
 qgisMinimumVersion=3.0
 description=Downloads and DHM Vlaanderen for specific area
-version=0.3
+version=0.4
 author=Rien Boydens
 email=rien.boydens@gmail.com
 
 about=This plugin downloads the DHM Vlaanderen covering a specified area and clips it to that area.
 
-tracker=http://github.com/SirRhynus
-repository=http://github.com/SirRhynus
+tracker=https://github.com/SirRhynus
+repository=https://github.com/SirRhynus
 # End of mandatory metadata
 
 # Recommended items:
 
-hasProcessingProvider=no
+hasProcessingProvider=yes
 changelog=
     0.3 - Fixed bugs:
             - Fixed separate bands in DHMV vrt
@@ -29,9 +29,9 @@ changelog=
     0.1 - Made GUI
 
 # Tags are comma separated with spaces allowed
-tags=
+tags=dem, import, web
 
-homepage=
+homepage=https://github.com/SirRhynus
 category=Web
 icon=icon.png
 

@@ -24,13 +24,14 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
-from qgis.core import Qgis, QgsProject, QgsMapLayerProxyModel, QgsProcessing, QgsVectorLayer, QgsRasterLayer, QgsMessageLog
+from qgis.core import Qgis, QgsProject, QgsApplication, QgsMapLayerProxyModel, QgsProcessing, QgsVectorLayer, QgsRasterLayer, QgsMessageLog
 from qgis import processing
 
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
 from .dhm_vlaanderen_downloader_dialog import DHMVlaanderenDownloaderDialog
+from .dhm_vlaanderen_downloader_provider import DHMVlaanderenDownloaderProvider
 import os.path
 import zipfile
 
@@ -66,6 +67,9 @@ class DHMVlaanderenDownloader:
         self.actions = []
         self.menu = self.tr(u'&DHM Vlaanderen Downloader')
 
+        # Enable provider
+        self.provider = None
+
         # Keep track of current settings
         self.dhmv = ""
         self.dhm = ""
@@ -74,6 +78,10 @@ class DHMVlaanderenDownloader:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
+
+    def initProcessing(self):
+        self.provider = DHMVlaanderenDownloaderProvider()
+        QgsApplication.processingRegistry().addProvider(self.provider)
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -175,6 +183,8 @@ class DHMVlaanderenDownloader:
             callback=self.run,
             parent=self.iface.mainWindow())
 
+        self.initProcessing()
+
         # will be set False in run()
         self.first_start = True
 
@@ -186,6 +196,7 @@ class DHMVlaanderenDownloader:
                 self.tr(u'&DHM Vlaanderen Downloader'),
                 action)
             self.iface.removeToolBarIcon(action)
+        QgsApplication.processingRegistry().removeProvider(self.provider)
 
 
     def run(self):
