@@ -54,8 +54,7 @@ class DHMVlaanderenDownloaderProvider(QgsProcessingProvider):
         Loads all algorithms belonging to this provider.
         """
         self.addAlgorithm(DHMVlaanderenDownloaderAlgorithm())
-        # add additional algorithms here
-        # self.addAlgorithm(MyOtherAlgorithm())
+
 
     def id(self):
         """

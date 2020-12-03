@@ -37,7 +37,10 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingException,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterEnum,
-                       QgsProcessingParameterFeatureSink)
+                       QgsProcessingParameterFeatureSink,
+                       QgsVectorLayer)
+from qgis import processing
+import os.path
 
 
 class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
@@ -63,7 +66,7 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
     DHMV = 'DHMV'
     RESOLUTION = 'RESOLUTION'
 
-    DHMV_ENUM = ['I DHM', 'II DSM', 'II DTM']
+    DHMV_ENUM = ['II DSM', 'II DTM', 'I DHM']
     RESOLUTION_ENUM = ['1m', '5m', '25m', '100m']
 
     def initAlgorithm(self, config):
@@ -108,7 +111,7 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
                 self.tr('Output layer'),
-                type=QgsProcessing.TypeRaster
+                type=QgsProcessing.TypeVectorAnyGeometry
             )
         )
 
@@ -133,25 +136,35 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
-        source = self.parameterAsSource(parameters, self.INPUT, context)
+        layer = self.parameterAsSource(parameters, self.INPUT, context)
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
-                context, source.fields(), source.wkbType(), source.sourceCrs())
+                context, layer.fields(), layer.wkbType(), layer.sourceCrs())
 
-        # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
-        features = source.getFeatures()
+        #if source.featureCount() != 1:
+        #    raise QgsProcessingException(f'Invalid number of features in Input layer. Only one feature is allowed.')
 
-        for current, feature in enumerate(features):
-            # Stop the algorithm if cancel button has been clicked
-            if feedback.isCanceled():
-                break
+        # Determine feature kaartbladen
+        if (dhmv[:2] == 'I ' and resolution == '100m') or (dhmv[:2] == 'II' and resolution in ('25m', '100m')):
+            # Don't download the same Vlaanderen kaartblad for high resolutions
+            kbls = {'1'}
+        else:
+            kbl = processing.run(
+                'native:extractbylocation', 
+                { 
+                    'INPUT' : QgsVectorLayer(os.path.join(os.path.dirname(__file__), 'Kbl/Kbl.shp')),
+                    'INTERSECT' : parameters['INPUT'], 
+                    'METHOD' : 0, 
+                    'PREDICATE' : [0,1,6], 
+                    'OUTPUT': QgsProcessing.TEMPORARY_OUTPUT
+                },
+                is_child_algorithm=True, 
+                context=context, 
+                feedback=feedback
+            )['OUTPUT']
 
-            # Add a feature in the sink
-            sink.addFeature(feature, QgsFeatureSink.FastInsert)
+            kbls = {int(feature.attribute('CODE')) for feature in context.getMapLayer(kbl).getFeatures()}
 
-            # Update the progress bar
-            feedback.setProgress(int(current * total))
 
         # Return the results of the algorithm. In this case our only result is
         # the feature sink which contains the processed features, but some
@@ -159,7 +172,7 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
         # statistics, etc. These should all be included in the returned
         # dictionary, with keys matching the feature corresponding parameter
         # or output names.
-        return {self.OUTPUT: dest_id}
+        return {'KBLS': kbls}
 
     def name(self):
         """
