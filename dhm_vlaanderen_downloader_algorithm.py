@@ -34,6 +34,7 @@ from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (QgsProcessing,
                        QgsFeatureSink,
                        QgsProcessingAlgorithm,
+                       QgsProcessingException,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterFeatureSink)
@@ -60,8 +61,10 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
     OUTPUT = 'OUTPUT'
     INPUT = 'INPUT'
     DHMV = 'DHMV'
-    DHM = 'DHM'
     RESOLUTION = 'RESOLUTION'
+
+    DHMV_ENUM = ['I DHM', 'II DSM', 'II DTM']
+    RESOLUTION_ENUM = ['1m', '5m', '25m', '100m']
 
     def initAlgorithm(self, config):
         """
@@ -84,16 +87,8 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterEnum(
                 self.DHMV,
                 'DHMV',
-                ['I', 'II'],
-                defaultValue='II'
-            )
-        )
-
-        self.addParameter(
-            QgsProcessingParameterEnum(
-                self.DHM,
-                'DHM',
-                ['DSM', 'DTM']
+                self.DHMV_ENUM,
+                defaultValue='II DSM'
             )
         )
         
@@ -101,7 +96,8 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterEnum(
                 self.RESOLUTION,
                 self.tr('Resolution'),
-                ['1m', '5m', '25m', '100m']
+                self.RESOLUTION_ENUM,
+                defaultValue='1m'
             )
         )
 
@@ -111,7 +107,8 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
-                self.tr('Output layer')
+                self.tr('Output layer'),
+                type=QgsProcessing.TypeRaster
             )
         )
 
@@ -119,6 +116,19 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+
+        # Check if version and resolution parameters are compatible
+        compatibility = {
+            'I DHM': ['5m', '25m', '100m'],
+            'II DSM': ['1m', '5m', '25m', '100m'],
+            'II DTM': ['1m', '5m']
+        }
+        dhmv = self.DHMV_ENUM[self.parameterAsEnum(parameters, self.DHMV, context)]
+        resolution = self.RESOLUTION_ENUM[self.parameterAsEnum(parameters, self.RESOLUTION, context)]
+        print(f'{dhmv} {resolution}')
+        if resolution not in compatibility[dhmv]:
+            raise QgsProcessingException(f'Resolution {resolution} not available for DHMV {dhmv}.\n\
+                Resolutions {compatibility[dhmv]} are available for DHMV {dhmv}.')
 
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
