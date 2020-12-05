@@ -78,12 +78,11 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
         with some other properties.
         """
 
-        # We add the input vector features source. It can have any kind of
-        # geometry.
+        # Add the study area
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
-                self.tr('Input layer'),
+                self.tr('Study Area'),
                 [QgsProcessing.TypeVectorPolygon]
             )
         )
@@ -107,9 +106,7 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
             )
         )
 
-        # We add a feature sink in which to store our processed features (this
-        # usually takes the form of a newly created vector layer when the
-        # algorithm is run in QGIS).
+        # Add the output file
         self.addParameter(
             QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
@@ -164,6 +161,7 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
+        # Split feedback in multiple steps according to the amount of kaartbladen
         multistep_feedback = QgsProcessingMultiStepFeedback(len(kbls) + 1, feedback)
 
         # Download DHM kaartbladen
@@ -203,10 +201,12 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
                 return {}
         
         multistep_feedback.setCurrentStep(len(kbls))
+        # Divide the last step in more steps for the last algorithms to come
         multistep_feedback1 = QgsProcessingMultiStepFeedback(2, multistep_feedback)
 
         multistep_feedback1.setCurrentStep(0)
-        multistep_feedback1.setProgressText("Building VRT...")
+        multistep_feedback1.setProgressText("Building Virtual Raster...")
+        # Build a virtual raster of the downloaded tiffs
         vrt = processing.run(
             'gdal:buildvirtualraster', 
             {
@@ -225,6 +225,7 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
 
         multistep_feedback1.setCurrentStep(1)
         multistep_feedback1.setProgressText('Clipping to layer...')
+        # Clip the DHM to to study area
         output = processing.run(
             'gdal:cliprasterbymasklayer',
             {
@@ -241,12 +242,7 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
 
         feedback.setProgressText('Done.')
 
-        # Return the results of the algorithm. In this case our only result is
-        # the feature sink which contains the processed features, but some
-        # algorithms may return multiple feature sinks, calculated numeric
-        # statistics, etc. These should all be included in the returned
-        # dictionary, with keys matching the feature corresponding parameter
-        # or output names.
+        # Return the results
         return {self.OUTPUT: output}
 
     def name(self):
