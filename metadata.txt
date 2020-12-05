@@ -20,6 +20,7 @@ repository=https://github.com/SirRhynus
 
 hasProcessingProvider=yes
 changelog=
+    0.4 - Made it into a processing provider
     0.3 - Fixed bugs:
             - Fixed separate bands in DHMV vrt
             - Gave name to output layer
