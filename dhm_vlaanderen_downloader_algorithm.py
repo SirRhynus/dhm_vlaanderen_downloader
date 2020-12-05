@@ -37,7 +37,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingException,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterEnum,
-                       QgsProcessingParameterFeatureSink,
+                       QgsProcessingParameterRasterDestination,
                        QgsRasterLayer,
                        QgsVectorLayer)
 from qgis import processing
@@ -110,10 +110,9 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
         # usually takes the form of a newly created vector layer when the
         # algorithm is run in QGIS).
         self.addParameter(
-            QgsProcessingParameterFeatureSink(
+            QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
-                self.tr('DHM'),
-                type=QgsProcessing.TypeRaster
+                'DHM'
             )
         )
 
@@ -130,12 +129,19 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
         }
         dhmv = self.DHMV_ENUM[self.parameterAsEnum(parameters, self.DHMV, context)]
         resolution = self.RESOLUTION_ENUM[self.parameterAsEnum(parameters, self.RESOLUTION, context)]
-        print(f'{dhmv} {resolution}')
         if resolution not in compatibility[dhmv]:
             raise QgsProcessingException(f'Resolution {resolution} not available for DHMV {dhmv}.\n\
                 Resolutions {compatibility[dhmv]} are available for DHMV {dhmv}.')
 
+        if feedback.isCanceled():
+            return {}
+
+        output = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
+        feedback.pushDebugInfo(str(output) +': ' + str(type(output)))
+
+
         # Determine feature kaartbladen
+        feedback.setProgressText(self.tr('Determining kaartbladen...'))
         if (dhmv[:2] == 'I ' and resolution == '100m') or (dhmv[:2] == 'II' and resolution in ('25m', '100m')):
             # Don't download the same Vlaanderen kaartblad for high resolutions
             kbls = {'1'}
@@ -156,10 +162,13 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
 
             kbls = {int(feature.attribute('CODE')) for feature in context.getMapLayer(kbl).getFeatures()}
         
+        if feedback.isCanceled():
+            return {}
+
         # Download DHM kaartbladen
         dhms = []
         for index, kbl in enumerate(kbls):
-            feedback.pushInfo(f"Downloading kaartblad {index+1}/{len(kbls)}")
+            feedback.setProgressText(f"Downloading kaartblad {index+1}/{len(kbls)}...")
             # Download zipfiles
             if dhmv == 'I DHM':
                 url = f'https://downloadagiv.blob.core.windows.net/digitaal-hoogtemodel-vlaanderen-raster-{resolution}/geoTIFF/{f"Gegroepeerd%20per%20kaartblad/R{resolution[:-1]}_{kbl:02d}.zip" if resolution != "100m" else "R100.zip"}'
@@ -175,17 +184,23 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
                 context=context,
                 feedback=feedback
             )['OUTPUT']
+
+            if feedback.isCanceled():
+                return {}
             
             # Extract tiffs from zipfile
-            feedback.pushInfo(f'Extracting {index+1}/{len(kbls)}')
+            feedback.setProgressText(f'Extracting {index+1}/{len(kbls)}...')
             with zipfile.ZipFile(zip_file_name) as zpf:
                 for name in zpf.namelist():
                     if name.endswith('.tif') or name.endswith('.tiff'):
                         dhms.append(QgsRasterLayer(zpf.extract(name, path=os.path.dirname(zip_file_name))))
                     if name.endswith('.tfw'):
                         zpf.extract(name, path=os.path.dirname(zip_file_name))
+            
+            if feedback.isCanceled():
+                return {}
         
-        feedback.pushInfo("Building VRT")
+        feedback.setProgressText("Building VRT...")
         vrt = processing.run(
             'gdal:buildvirtualraster', 
             {
@@ -199,6 +214,10 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
             feedback=feedback
         )['OUTPUT']
 
+        if feedback.isCanceled():
+            return {}
+
+        feedback.setProgressText('Clipping to layer...')
         output = processing.run(
             'gdal:cliprasterbymasklayer',
             {
@@ -206,13 +225,14 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
                 'MASK': parameters['INPUT'],
                 'CROP_TO_CUTLINE': True,
                 'KEEP_RESOLUTION': True,
-                'OUTPUT': parameters['OUTPUT']
+                'OUTPUT': output
             },
             is_child_algorithm=True,
             context=context,
             feedback=feedback
         )['OUTPUT']
 
+        feedback.setProgressText('Done.')
 
         # Return the results of the algorithm. In this case our only result is
         # the feature sink which contains the processed features, but some
