@@ -12,8 +12,8 @@ email=rien.boydens@gmail.com
 
 about=This plugin downloads the DHM Vlaanderen covering a specified area and clips it to that area.
 
-tracker=https://github.com/SirRhynus
-repository=https://github.com/SirRhynus
+tracker=https://github.com/SirRhynus/dhm_vlaanderen_downloader/issues
+repository=https://github.com/SirRhynus/dhm_vlaanderen_downloader
 # End of mandatory metadata
 
 # Recommended items:
@@ -35,7 +35,7 @@ changelog=
 # Tags are comma separated with spaces allowed
 tags=dem, import, web
 
-homepage=https://github.com/SirRhynus
+homepage=https://github.com/SirRhynus/dhm_vlaanderen_downloader
 category=Web
 icon=icon.png
 
