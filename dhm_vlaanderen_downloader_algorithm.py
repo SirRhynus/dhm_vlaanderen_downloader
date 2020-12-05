@@ -39,7 +39,8 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterRasterDestination,
                        QgsRasterLayer,
-                       QgsVectorLayer)
+                       QgsVectorLayer,
+                       QgsProcessingMultiStepFeedback)
 from qgis import processing
 import os.path
 import zipfile
@@ -163,10 +164,13 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
+        multistep_feedback = QgsProcessingMultiStepFeedback(len(kbls) + 1, feedback)
+
         # Download DHM kaartbladen
         dhms = []
         for index, kbl in enumerate(kbls):
-            feedback.setProgressText(f"Downloading kaartblad {index+1}/{len(kbls)}...")
+            multistep_feedback.setCurrentStep(index)
+            multistep_feedback.setProgressText(f"Downloading kaartblad {index+1}/{len(kbls)}...")
             # Download zipfiles
             if dhmv == 'I DHM':
                 url = f'https://downloadagiv.blob.core.windows.net/digitaal-hoogtemodel-vlaanderen-raster-{resolution}/geoTIFF/{f"Gegroepeerd%20per%20kaartblad/R{resolution[:-1]}_{kbl:02d}.zip" if resolution != "100m" else "R100.zip"}'
@@ -180,10 +184,10 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
                 },
                 is_child_algorithm=True,
                 context=context,
-                feedback=feedback
+                feedback=multistep_feedback
             )['OUTPUT']
 
-            if feedback.isCanceled():
+            if multistep_feedback.isCanceled():
                 return {}
             
             # Extract tiffs from zipfile
@@ -195,10 +199,14 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
                     if name.endswith('.tfw'):
                         zpf.extract(name, path=os.path.dirname(zip_file_name))
             
-            if feedback.isCanceled():
+            if multistep_feedback.isCanceled():
                 return {}
         
-        feedback.setProgressText("Building VRT...")
+        multistep_feedback.setCurrentStep(len(kbls))
+        multistep_feedback1 = QgsProcessingMultiStepFeedback(2, multistep_feedback)
+
+        multistep_feedback1.setCurrentStep(0)
+        multistep_feedback1.setProgressText("Building VRT...")
         vrt = processing.run(
             'gdal:buildvirtualraster', 
             {
@@ -209,13 +217,14 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
             },
             is_child_algorithm=True,
             context=context,
-            feedback=feedback
+            feedback=multistep_feedback1
         )['OUTPUT']
 
-        if feedback.isCanceled():
+        if multistep_feedback1.isCanceled():
             return {}
 
-        feedback.setProgressText('Clipping to layer...')
+        multistep_feedback1.setCurrentStep(1)
+        multistep_feedback1.setProgressText('Clipping to layer...')
         output = processing.run(
             'gdal:cliprasterbymasklayer',
             {
@@ -227,7 +236,7 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
             },
             is_child_algorithm=True,
             context=context,
-            feedback=feedback
+            feedback=multistep_feedback1
         )['OUTPUT']
 
         feedback.setProgressText('Done.')
