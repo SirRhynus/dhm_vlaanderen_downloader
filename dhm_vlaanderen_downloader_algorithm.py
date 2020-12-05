@@ -137,8 +137,6 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
             return {}
 
         output = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
-        feedback.pushDebugInfo(str(output) +': ' + str(type(output)))
-
 
         # Determine feature kaartbladen
         feedback.setProgressText(self.tr('Determining kaartbladen...'))
