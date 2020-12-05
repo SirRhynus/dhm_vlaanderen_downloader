@@ -1,3 +1,4 @@
 .vscode/
 plugin_upload.py
 help/build/
+zip_build/

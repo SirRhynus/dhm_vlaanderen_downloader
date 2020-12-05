@@ -35,7 +35,7 @@ changelog=
 # Tags are comma separated with spaces allowed
 tags=dem, import, web
 
-homepage=https://github.com/SirRhynus/dhm_vlaanderen_downloader
+homepage=https://github.com/SirRhynus/dhm_vlaanderen_downloader/releases/
 category=Web
 icon=icon.png
 
