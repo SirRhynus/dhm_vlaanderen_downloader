@@ -1,5 +1,0 @@
-<RCC>
-    <qresource prefix="/plugins/dhm_vlaanderen_downloader" >
-        <file>icon.png</file>
-    </qresource>
-</RCC>
