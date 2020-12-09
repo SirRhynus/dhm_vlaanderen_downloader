@@ -122,8 +122,8 @@ class DHMVlaanderenDownloaderAlgorithm(QgsProcessingAlgorithm):
         # Check if version and resolution parameters are compatible
         compatibility = {
             'I DHM': ['5m', '25m', '100m'],
-            'II DSM': ['1m', '5m', '25m', '100m'],
-            'II DTM': ['1m', '5m']
+            'II DTM': ['1m', '5m', '25m', '100m'],
+            'II DSM': ['1m', '5m']
         }
         dhmv = self.DHMV_ENUM[self.parameterAsEnum(parameters, self.DHMV, context)]
         resolution = self.RESOLUTION_ENUM[self.parameterAsEnum(parameters, self.RESOLUTION, context)]
