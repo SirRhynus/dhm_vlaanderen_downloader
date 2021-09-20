@@ -20,6 +20,7 @@ repository=https://github.com/SirRhynus/dhm_vlaanderen_downloader
 
 hasProcessingProvider=yes
 changelog=
+    1.0.2 - Semantic versioning
     1.0.1 - Bugfixes
     1.0 - Stable release
     0.6 - Improved feedback with multistepfeedback
